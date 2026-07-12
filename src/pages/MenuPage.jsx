@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { getCategories, getProduits, appelServeur, getParametres } from '../lib/supabase';
 import Book3D, { ProduitCard } from '../components/Book3D';
 import Panier from '../components/Panier';
@@ -25,7 +25,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 50; // tout afficher par catégorie
 
 const L = {
   chargement: 'Chargement…',
@@ -54,12 +54,6 @@ export default function MenuPage() {
   const [appelLoading, setAppelLoading] = useState(false);
   const [parametres, setParametres] = useState(null);
   const [search, setSearch]         = useState('');
-
-  // Mesure dynamique de la hauteur du header + searchbar
-  const headerRef   = useRef(null);
-  const searchRef   = useRef(null);
-  const [topHeight, setTopHeight] = useState(140);
-
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -69,17 +63,6 @@ export default function MenuPage() {
       setParametres(params.data || null);
       setLoading(false);
     });
-  }, []);
-
-  // Mesurer la hauteur des zones fixes pour calculer celle du livre
-  useEffect(() => {
-    const measure = () => {
-      const h = (headerRef.current?.offsetHeight || 70) + (searchRef.current?.offsetHeight || 52);
-      setTopHeight(h);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
   }, []);
 
   useEffect(() => {
@@ -97,16 +80,10 @@ export default function MenuPage() {
     categories.forEach(cat => {
       const catProds = produits.filter(p => p.categorie_id === cat.id);
       if (!catProds.length) return;
-      for (let i = 0; i < catProds.length; i += ITEMS_PER_PAGE) {
-        pages.push({ categorie: cat, produits: catProds.slice(i, i + ITEMS_PER_PAGE) });
-      }
+      pages.push({ categorie: cat, produits: catProds });
     });
     const sansCat = produits.filter(p => !p.categorie_id);
-    if (sansCat.length > 0) {
-      for (let i = 0; i < sansCat.length; i += ITEMS_PER_PAGE) {
-        pages.push({ categorie: { nom: 'Autres', emoji: '🍽️' }, produits: sansCat.slice(i, i + ITEMS_PER_PAGE) });
-      }
-    }
+    if (sansCat.length > 0) pages.push({ categorie: { nom: 'Autres', emoji: '🍽️' }, produits: sansCat });
     return pages;
   };
 
@@ -154,10 +131,8 @@ export default function MenuPage() {
       })
     : [];
 
-  // Hauteur du livre sur desktop = 100vh - zones fixes - nav - un peu de marge
-  const bookHeight = `calc(100dvh - ${topHeight}px - 80px)`;
-
   return (
+    /* Root — pas de overflow hidden, scroll natif */
     <div style={{
       minHeight: '100dvh',
       background: C.cream,
@@ -165,22 +140,22 @@ export default function MenuPage() {
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     }}>
 
-      {/* ══ HEADER ══ */}
-      <header ref={headerRef} style={{
+      {/* ── HEADER sticky ── */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 100,
         padding: isMobile ? '12px 16px' : '14px 32px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: C.primary, flexShrink: 0, gap: 10, zIndex: 100,
+        background: C.primary, gap: 10,
         boxShadow: '0 2px 16px rgba(26,58,42,0.25)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           {parametres?.logo_url ? (
-            <img src={parametres.logo_url} alt="Logo"
-              style={{ width: isMobile ? 36 : 42, height: isMobile ? 36 : 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${C.gold}` }} />
+            <img src={parametres.logo_url} alt="Logo" style={{ width: isMobile ? 36 : 42, height: isMobile ? 36 : 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${C.gold}` }} />
           ) : (
             <div style={{ width: isMobile ? 36 : 42, height: isMobile ? 36 : 42, borderRadius: '50%', background: `linear-gradient(135deg, ${C.gold}, ${C.goldLight})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>🌿</div>
           )}
           <div style={{ minWidth: 0 }}>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: isMobile ? 20 : 24, fontWeight: 700, color: C.beige, letterSpacing: '0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: isMobile ? 20 : 24, fontWeight: 700, color: C.beige, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {parametres?.nom_restaurant || 'Le Centre'}
             </h1>
             {!isMobile && <p style={{ fontSize: 10, color: C.gold, margin: 0, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Notre Carte</p>}
@@ -196,37 +171,33 @@ export default function MenuPage() {
             color: '#fff', borderRadius: 8, padding: isMobile ? '7px 12px' : '8px 20px',
             fontSize: isMobile ? 14 : 13, fontWeight: 700, cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-            boxShadow: totalItems > 0 ? `0 4px 16px rgba(184,148,63,0.35)` : 'none',
           }}>
             🛒 {!isMobile && L.panier}
-            {totalItems > 0 && (
-              <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', minWidth: 20, height: 20, padding: '0 5px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{totalItems}</span>
-            )}
+            {totalItems > 0 && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', minWidth: 20, height: 20, padding: '0 5px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{totalItems}</span>}
           </button>
         </div>
       </header>
 
-      {/* ══ BARRE DE RECHERCHE ══ */}
-      <div ref={searchRef} style={{ flexShrink: 0, padding: isMobile ? '10px 16px' : '12px 32px', background: C.primaryMid }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.10)', border: `1px solid rgba(184,148,63,0.25)`, borderRadius: 10, padding: isMobile ? '9px 14px' : '10px 16px', maxWidth: isMobile ? '100%' : 520, margin: isMobile ? 0 : '0 auto', backdropFilter: 'blur(4px)' }}>
+      {/* ── BARRE RECHERCHE sticky ── */}
+      <div style={{ position: 'sticky', top: isMobile ? 60 : 70, zIndex: 99, padding: isMobile ? '10px 16px' : '12px 32px', background: C.primaryMid }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.10)', border: `1px solid rgba(184,148,63,0.25)`, borderRadius: 10, padding: isMobile ? '9px 14px' : '10px 16px', maxWidth: isMobile ? '100%' : 520, margin: isMobile ? 0 : '0 auto' }}>
           <span style={{ fontSize: 14, color: C.gold }}>🔎</span>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={L.recherche}
-            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: C.beige, fontFamily: "'Inter', sans-serif" }} />
-          {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'transparent', color: 'rgba(245,237,216,0.5)', fontSize: 16, cursor: 'pointer', padding: 2, lineHeight: 1 }}>✕</button>}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: C.beige, fontFamily: 'inherit' }} />
+          {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'transparent', color: 'rgba(245,237,216,0.5)', fontSize: 16, cursor: 'pointer' }}>✕</button>}
         </div>
       </div>
 
-      {/* ══ CONTENU PRINCIPAL ══ */}
-      {loading ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-          <div className="spinner" />
-          <p style={{ color: C.darkSoft, fontSize: 14 }}>{L.chargement}</p>
-        </div>
-      ) : searchActive ? (
-        /* ─── MODE RECHERCHE : scroll libre ─── */
-        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 16px 40px' : '24px 32px 40px' }}>
-          <div style={{ maxWidth: 960, margin: '0 auto' }}>
-            {filteredProduits.length === 0 ? (
+      {/* ── CONTENU — scroll natif ── */}
+      <main style={{ flex: 1, padding: isMobile ? '16px 0 60px' : '24px 32px 60px' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '80px 0' }}>
+              <div className="spinner" />
+              <p style={{ color: C.darkSoft, fontSize: 14 }}>{L.chargement}</p>
+            </div>
+          ) : searchActive ? (
+            filteredProduits.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: C.darkSoft }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
                 <p>Aucun résultat trouvé.</p>
@@ -240,57 +211,38 @@ export default function MenuPage() {
                   return acc;
                 }, {})
               ).map(([catName, prods]) => (
-                <div key={catName} style={{ marginBottom: 20 }}>
+                <div key={catName} style={{ marginBottom: 28, padding: isMobile ? '0 16px' : 0 }}>
                   <h3 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, fontWeight: 700, color: C.primary, margin: '0 0 8px', paddingBottom: 6, borderBottom: `2px solid ${C.gold}` }}>
                     {catName} <span style={{ fontSize: 12, fontWeight: 400, color: C.darkSoft }}>({prods.length})</span>
                   </h3>
                   {prods.map(p => <ProduitCard key={p.id} produit={p} onAdd={handleAdd} isMobile={isMobile} />)}
                 </div>
               ))
-            )}
-          </div>
+            )
+          ) : (
+            <Book3D pages={pages} onAdd={handleAdd} isMobile={isMobile} parametres={parametres} />
+          )}
         </div>
-      ) : (
-        /* ─── MODE LIVRE : hauteur fixe calculée ─── */
-        <div style={{
-          width: '100%',
-          maxWidth: isMobile ? '100%' : 980,
-          margin: '0 auto',
-          padding: isMobile ? 0 : '16px 32px 16px',
-          boxSizing: 'border-box',
-          // Hauteur = tout ce qui reste entre searchbar et bas de l'écran
-          height: isMobile ? undefined : bookHeight,
-          flex: isMobile ? 1 : undefined,
-          display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-        }}>
-          <Book3D pages={pages} onAdd={handleAdd} isMobile={isMobile} parametres={parametres} />
-        </div>
-      )}
+      </main>
 
-      {/* ══ FOOTER — seulement si pas en mode livre sur desktop ══ */}
-      {!isMobile && !loading && !searchActive && parametres && (parametres.adresse || parametres.telephone) && (
-        <footer style={{ borderTop: `1px solid ${C.border}`, padding: '14px 24px 20px', textAlign: 'center', color: C.darkSoft, fontSize: 13, maxWidth: 980, width: '100%', margin: '0 auto', flexShrink: 0 }}>
+      {/* ── FOOTER ── */}
+      {!loading && parametres && (parametres.adresse || parametres.telephone) && (
+        <footer style={{ borderTop: `1px solid ${C.border}`, padding: '16px 24px 24px', textAlign: 'center', color: C.darkSoft, fontSize: 13 }}>
           {parametres.adresse && <p style={{ marginBottom: 4, color: C.dark }}>{parametres.adresse}</p>}
           {parametres.horaires && <p style={{ marginBottom: 4 }}>{parametres.horaires}</p>}
           {parametres.telephone && (
-            <p style={{ color: C.dark }}>
-              {parametres.telephone}
+            <p>{parametres.telephone}
               {parametres.whatsapp && <a href={`https://wa.me/${parametres.whatsapp}`} target="_blank" rel="noopener noreferrer" style={{ color: C.gold, marginLeft: 10, textDecoration: 'none', fontWeight: 600 }}>WhatsApp</a>}
             </p>
           )}
-          <a href="https://wa.me/243977555768" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10, color: 'rgba(26,26,20,0.25)', fontSize: 11, textDecoration: 'none' }}>Développé par Inspire by YuuStore</a>
+          <a href="https://wa.me/243977555768" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10, color: 'rgba(26,26,20,0.20)', fontSize: 11, textDecoration: 'none' }}>Développé par Inspire by YuuStore</a>
         </footer>
       )}
 
-      {/* ══ PANIER ══ */}
-      {showPanier && (
-        <Panier items={panier} onUpdateQty={handleUpdateQty}
-          onRemove={(idx) => setPanier(prev => prev.filter((_, i) => i !== idx))}
-          onClose={() => setShowPanier(false)} onConfirm={handleConfirm} isMobile={isMobile} />
-      )}
+      {/* ── PANIER ── */}
+      {showPanier && <Panier items={panier} onUpdateQty={handleUpdateQty} onRemove={(idx) => setPanier(prev => prev.filter((_, i) => i !== idx))} onClose={() => setShowPanier(false)} onConfirm={handleConfirm} isMobile={isMobile} />}
 
-      {/* ══ MODAL APPEL SERVEUR ══ */}
+      {/* ── MODAL APPEL ── */}
       {showAppel && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,58,42,0.50)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setShowAppel(false)}>
           <div style={{ background: '#fff', borderRadius: 20, padding: isMobile ? 24 : 32, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(26,58,42,0.25)' }} onClick={e => e.stopPropagation()}>
@@ -299,13 +251,12 @@ export default function MenuPage() {
               <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: isMobile ? 20 : 24, color: C.primary, margin: 0, fontWeight: 700 }}>{L.tableModal}</h2>
             </div>
             <div style={{ marginBottom: 18 }}>
-              <input value={tableAppel} onChange={e => { setTableAppel(e.target.value); setErrAppel(''); }} placeholder={L.tablePh} onKeyDown={e => e.key === 'Enter' && handleAppelServeur()} autoFocus
-                style={{ width: '100%', padding: '13px 16px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 16, fontFamily: 'inherit', outline: 'none', color: C.dark }} />
+              <input value={tableAppel} onChange={e => { setTableAppel(e.target.value); setErrAppel(''); }} placeholder={L.tablePh} onKeyDown={e => e.key === 'Enter' && handleAppelServeur()} autoFocus style={{ width: '100%', padding: '13px 16px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 16, fontFamily: 'inherit', outline: 'none', color: C.dark }} />
               {errAppel && <p style={{ color: '#C0392B', fontSize: 12, marginTop: 6 }}>⚠️ {errAppel}</p>}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setShowAppel(false)} style={{ flex: 1, padding: isMobile ? 14 : 12, borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.darkSoft, fontSize: 15, cursor: 'pointer', fontWeight: 600 }}>{L.annuler}</button>
-              <button onClick={handleAppelServeur} disabled={appelLoading} style={{ flex: 2, padding: isMobile ? 14 : 12, borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryMid})`, color: C.beige, fontSize: 15, fontWeight: 700 }}>
+              <button onClick={() => setShowAppel(false)} style={{ flex: 1, padding: 13, borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.darkSoft, fontSize: 15, cursor: 'pointer', fontWeight: 600 }}>{L.annuler}</button>
+              <button onClick={handleAppelServeur} disabled={appelLoading} style={{ flex: 2, padding: 13, borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryMid})`, color: C.beige, fontSize: 15, fontWeight: 700 }}>
                 {appelLoading ? '⏳…' : L.envoyer}
               </button>
             </div>
@@ -313,9 +264,9 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* ══ TOAST ══ */}
+      {/* ── TOAST ── */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: isMobile ? 20 : 30, left: '50%', transform: 'translateX(-50%)', background: C.primary, color: C.beige, padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 600, zIndex: 200, boxShadow: '0 8px 24px rgba(26,58,42,0.25)', border: `1px solid ${C.gold}` }}>{toast}</div>
+        <div style={{ position: 'fixed', bottom: isMobile ? 20 : 30, left: '50%', transform: 'translateX(-50%)', background: C.primary, color: C.beige, padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 600, zIndex: 200, border: `1px solid ${C.gold}`, boxShadow: '0 8px 24px rgba(26,58,42,0.25)' }}>{toast}</div>
       )}
     </div>
   );
