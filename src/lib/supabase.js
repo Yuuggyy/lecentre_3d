@@ -55,6 +55,9 @@ export const getAppels = () =>
 export const traiterAppel = (id) =>
   supabase.from('appels_serveur').update({ traite: true }).eq('id', id);
 
+export const deleteAppel = (id) =>
+  supabase.from('appels_serveur').delete().eq('id', id);
+
 // ── Admin Auth ──
 export const signInAdmin  = (email, password) =>
   supabase.auth.signInWithPassword({ email, password });

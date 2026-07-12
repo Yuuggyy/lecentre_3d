@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   signInAdmin, signOutAdmin,
   getCommandes, updateStatutCommande, deleteCommande,
-  getAppels, traiterAppel,
+  getAppels, traiterAppel, deleteAppel,
   getAllProduits, getAllCategories,
   createProduit, updateProduit, deleteProduit,
   createCategorie, updateCategorie, deleteCategorie,
@@ -270,6 +270,11 @@ function AppelsTab() {
     load();
   };
 
+  const handleDelete = async (id) => {
+    await deleteAppel(id);
+    load();
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
@@ -296,14 +301,20 @@ function AppelsTab() {
                 <span style={{ fontWeight: 700, color: C.primary }}>Table {appel.numero_table}</span>
                 {appel.message && <p style={{ fontSize: 13, color: C.darkSoft, marginTop: 4 }}>{appel.message}</p>}
               </div>
-              {!appel.traite && (
-                <button onClick={() => handleTraiter(appel.id)} style={{
-                  padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.gold}, ${C.goldLight})`,
-                  color: '#fff', fontSize: 13, fontWeight: 600,
-                }}>✅ Traité</button>
-              )}
-              {appel.traite && <span style={{ fontSize: 12, color: C.success }}>✅ Traité</span>}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {!appel.traite && (
+                  <button onClick={() => handleTraiter(appel.id)} style={{
+                    padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: `linear-gradient(135deg, ${C.gold}, ${C.goldLight})`,
+                    color: '#fff', fontSize: 13, fontWeight: 600,
+                  }}>✅ Traité</button>
+                )}
+                {appel.traite && <span style={{ fontSize: 12, color: C.success }}>✅ Traité</span>}
+                <button onClick={() => handleDelete(appel.id)} style={{
+                  padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(192,57,43,0.25)',
+                  background: 'rgba(192,57,43,0.07)', cursor: 'pointer', fontSize: 13, color: '#C0392B',
+                }}>🗑 Supprimer</button>
+              </div>
             </div>
           ))}
         </div>

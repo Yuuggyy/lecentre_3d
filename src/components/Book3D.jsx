@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const C = {
   primary:    '#1A3A2A',
@@ -85,16 +85,29 @@ export default function Book3D({ pages, onAdd, isMobile }) {
     touchStartY.current = e.touches[0].clientY;
   };
 
+  // NE PAS utiliser onTouchEnd sur le div — ça bloque le scroll natif iOS
+  // On utilise onTouchMove pour détecter direction et agir seulement si horizontal pur
+  const onTouchMove = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+    // Si clairement horizontal (dx > 60px ET angle < 30°), on intercepte
+    if (Math.abs(dx) > 60 && dy < 30) {
+      e.preventDefault(); // bloquer scroll vertical SEULEMENT si swipe horizontal pur
+    }
+  };
+
   const onTouchEnd = (e) => {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-    // swipe horizontal seulement si clairement plus horizontal que vertical
-    if (Math.abs(dx) > 50 && dy < Math.abs(dx) * 0.7) {
+    const dy = Math.abs(e.changedTouches[0].clientY - (touchStartY.current || 0));
+    // Changer catégorie seulement si mouvement clairement horizontal
+    if (Math.abs(dx) > 60 && dy < 40) {
       if (dx < 0 && current < total - 1) setCurrent(c => c + 1);
       if (dx > 0 && current > 0) setCurrent(c => c - 1);
     }
     touchStartX.current = null;
+    touchStartY.current = null;
   };
 
   if (!pages || total === 0) return (
@@ -106,8 +119,17 @@ export default function Book3D({ pages, onAdd, isMobile }) {
 
   const page = pages[current];
 
+  // Ref pour attacher l'événement non-passif (nécessaire pour preventDefault sur iOS)
+  const wrapperRef = useRef(null);
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, [current, total]);
+
   return (
-    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div ref={wrapperRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
       {/* ── Onglets catégories scrollables ── */}
       <div style={{
