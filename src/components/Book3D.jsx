@@ -87,7 +87,7 @@ export function ProduitCard({ produit, onAdd, isMobile }) {
 /* ─── PageContent ─────────────────────────────────────────── */
 function PageContent({ categorie, produits, onAdd, isMobile }) {
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', overflow: 'hidden', minHeight: 0 }}>
       {/* Header catégorie */}
       <div style={{
         padding: isMobile ? '14px 16px 12px' : '18px 24px 14px',
@@ -210,7 +210,7 @@ export default function Book3D({ pages, onAdd, isMobile }) {
   // ═══════════════════════════════════
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
         {/* Onglets */}
@@ -273,7 +273,7 @@ export default function Book3D({ pages, onAdd, isMobile }) {
   const [leftPage, rightPage] = pairs[pairIdx] || [null, null];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
       {/* Onglets paires */}
       <div style={{ display: 'flex', gap: 6, padding: '10px 0 12px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' }}>
@@ -294,7 +294,7 @@ export default function Book3D({ pages, onAdd, isMobile }) {
       </div>
 
       {/* Livre double page */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative', alignItems: 'stretch' }}>
 
         {/* Reliure centrale */}
         <div style={{
@@ -312,7 +312,7 @@ export default function Book3D({ pages, onAdd, isMobile }) {
         <div
           key={`left-${pairIdx}-${flipKey}`}
           style={{
-            flex: 1, minWidth: 0,
+            flex: 1, minWidth: 0, minHeight: 0,
             border: `1px solid ${C.border}`, borderRight: 'none',
             borderRadius: '14px 0 0 14px', overflow: 'hidden',
             boxShadow: `-2px 0 20px rgba(26,58,42,0.07)`,
@@ -326,7 +326,7 @@ export default function Book3D({ pages, onAdd, isMobile }) {
         <div
           key={`right-${pairIdx}-${flipKey}`}
           style={{
-            flex: 1, minWidth: 0,
+            flex: 1, minWidth: 0, minHeight: 0,
             border: `1px solid ${C.border}`, borderLeft: 'none',
             borderRadius: '0 14px 14px 0', overflow: 'hidden',
             boxShadow: `2px 0 20px rgba(26,58,42,0.07)`,

@@ -276,11 +276,18 @@ export default function MenuPage() {
       {/* ══ CONTENU ══ */}
       <main style={{
         flex: 1,
-        overflow: (isMobile && !searchActive) ? 'hidden' : 'auto',
-        maxWidth: isMobile ? '100%' : 960,
+        minHeight: 0,
+        // Sur desktop avec le livre : on veut que le livre prenne toute la hauteur
+        // sans overflow sur le conteneur (le scroll est dans le livre lui-même)
+        overflow: (!isMobile && !searchActive) ? 'hidden' : (isMobile && !searchActive ? 'hidden' : 'auto'),
+        display: 'flex',
+        flexDirection: 'column',
+        maxWidth: isMobile ? '100%' : 980,
         width: '100%', margin: '0 auto',
         boxSizing: 'border-box',
-        padding: isMobile ? (searchActive ? '4px 16px 40px' : 0) : '32px 24px 60px',
+        padding: isMobile
+          ? (searchActive ? '4px 16px 40px' : 0)
+          : (searchActive ? '24px 32px 40px' : '20px 32px 16px'),
         background: C.cream,
       }}>
         {loading ? (
@@ -319,7 +326,9 @@ export default function MenuPage() {
             </div>
           )
         ) : (
-          <Book3D pages={pages} onAdd={handleAdd} isMobile={isMobile} parametres={parametres} />
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <Book3D pages={pages} onAdd={handleAdd} isMobile={isMobile} parametres={parametres} />
+          </div>
         )}
       </main>
 
